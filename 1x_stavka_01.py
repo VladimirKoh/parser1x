@@ -1,9 +1,14 @@
+from telethon import TelegramClient, events, sync, connection
 import pygame
 import requests
 import time
 import os
 
 
+#telethon-----
+api_id = 25026218 # Тут укажите полученый ранее api
+api_hash = '35e2d83fc7ca77eb48d3200917ae85f0' # Тут укажите полученый ранее hash
+#-------------
 
 count = 0 # количество выполненых обновлений (индикатор работоспособности.//////)
 time_ozhidaniya = 5     #время через которое делается новый запрос джсона
@@ -31,7 +36,7 @@ def get_ice_hockey_all_json():
 def return_time_minute_second_round(second):
     minute = second // 60
     seconds = second % 60
-    return f"{minute}:{seconds}"
+    return f"{str(minute).rjust(2, '0')}:{str(seconds).rjust(2, '0')}"
 
 def get_minute(second):
     minute = second // 60
@@ -43,11 +48,11 @@ def return_time_in_list_minute(second):
 
 
 def match_selection(json_data):
-    result_fun = []
+    result_fun = ''
     for matchs in json_data['Value']:
-        row_bolshinstva = matchs['SC'].get('I', None)
+        row_bolshinstva = matchs['SC'].get('I', 'Ничего')
         time_round = int(matchs['SC'].get('TS', 0))
-        nalichie_bolshinstva = row_bolshinstva if 'большистве' in row_bolshinstva else None
+        nalichie_bolshinstva = row_bolshinstva if 'большинстве' in row_bolshinstva else None
         availability_time_in_list_minute = return_time_in_list_minute(time_round)
 
         uslovie = [(nalichie_bolshinstva != None and ('начала' or 'Матч') not in nalichie_bolshinstva) and get_minute(time_round) > 1, 
@@ -61,27 +66,33 @@ def match_selection(json_data):
             for i in matchs['SC']['PS']: # Счет в периодах!
                 result_period = list(i.values())[-1]
                 score_periods += f"({result_period.get('S1', 0)}-{result_period.get('S2', 0)})"
-            result_fun.append(f"{name_liga}{score_periods}\n{nalichie_bolshinstva}\n{time}\n\n")
+            result_fun += f"{name_liga}\n👉{nalichie_bolshinstva}\n{score_periods}{time}\n\n"
 
-    if result_fun != []:
-        pygame.init()
-        song = pygame.mixer.Sound('123.mp3')
-        clock = pygame.time.Clock()
-        song.play()
-        clock.tick(1)
-    else:
-        result_fun.append('Нет матчей')
-        
     return result_fun
 
 # print(match_selection(get_ice_hockey_all_json()))        
 
-while True:
-    count += 1
-    print(count)
-    print(*match_selection(get_ice_hockey_all_json()))
-    time.sleep(time_ozhidaniya)
-    os.system('clear')
+
+with TelegramClient('my', api_id, api_hash) as client:
+
+    while True:
+        for i in client.iter_messages('@hockey_strategy', limit=1):
+            last_message = i     #id, message
+
+        count += 1
+        print(count)
+        result_function = match_selection(get_ice_hockey_all_json())
+        if result_function != '':
+            if len(last_message.message) + 2 == len(result_function):
+                try:
+                    client.edit_message('@hockey_strategy', message=last_message.id, text=result_function)
+                except:
+                    print('Не удалось отредактировать сообщение')
+                    time_ozhidaniya = 3
+            else:   
+                client.send_message('@hockey_strategy', message=result_function)
+        time.sleep(time_ozhidaniya)
+        os.system('clear')
 
 
 
