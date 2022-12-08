@@ -8,7 +8,7 @@ import os
 count = 0 # количество выполненых обновлений (индикатор работоспособности.//////)
 time_ozhidaniya = 5     #время через которое делается новый запрос джсона
 list_minute = [16, 17, 18, 19, 36, 37, 38, 39] # какие минуты мониторит
-uslovie_number = int(input('Выберете режим работы(0-бол+любое время,1-рабочий,2-все)')) #выбор режима работы программы 
+uslovie_number = int(input('Выберете режим работы\n(0 - большинство + любое время, 1 - Основное, 2 - все игры)')) #выбор режима работы программы 
 # (0. Большинство + любое время)
 # (1. Большинство + нужное время) --- основной режим
 # (2. Все игры)
@@ -28,7 +28,7 @@ def get_ice_hockey_all_json():
     return response.json()
 
 
-def get_time_all_ice_hockey(second):
+def return_time_minute_second_round(second):
     minute = second // 60
     seconds = second % 60
     return f"{minute}:{seconds}"
@@ -37,7 +37,7 @@ def get_minute(second):
     minute = second // 60
     return minute
 
-def get_time_all_ice_hockey_minute(second):
+def return_time_in_list_minute(second):
     minute = second // 60
     return minute in list_minute
 
@@ -45,24 +45,23 @@ def get_time_all_ice_hockey_minute(second):
 def match_selection(json_data):
     result_fun = []
     for matchs in json_data['Value']:
-        nalichie_bolshinstva = matchs['SC'].get('I', None)
+        row_bolshinstva = matchs['SC'].get('I', None)
         time_round = int(matchs['SC'].get('TS', 0))
-        nalichie_times = get_time_all_ice_hockey_minute(time_round)
-        uslovie = [(nalichie_bolshinstva != None and ('начала' or 'Матч') not in nalichie_bolshinstva) and get_minute(time_round) > 1, (nalichie_bolshinstva != None and ('начала' and 'приостановлен') not in nalichie_bolshinstva) and nalichie_times, get_minute(time_round) > 1]
+        nalichie_bolshinstva = row_bolshinstva if 'большистве' in row_bolshinstva else None
+        availability_time_in_list_minute = return_time_in_list_minute(time_round)
+
+        uslovie = [(nalichie_bolshinstva != None and ('начала' or 'Матч') not in nalichie_bolshinstva) and get_minute(time_round) > 1, 
+        nalichie_bolshinstva is not None and availability_time_in_list_minute, 
+        get_minute(time_round) > 1]
+
         if uslovie[uslovie_number]:
             name_liga = matchs['L']
-            count_periods = ""
-            time = get_time_all_ice_hockey(time_round)
+            time = return_time_minute_second_round(time_round)
+            score_periods = ""
             for i in matchs['SC']['PS']: # Счет в периодах!
                 result_period = list(i.values())[-1]
-                count_periods += f"({result_period.get('S1', 0)}-{result_period.get('S2', 0)})"
-            result_fun.append(f"{name_liga}{count_periods}\n{nalichie_bolshinstva}\n{time}\n\n")
-            # result_fun.append({
-            #     'name_liga': name_liga,
-            #     'count_periods': count_periods,
-            #     'nalichie_bolsh': nalichie_bolshinstva,
-            #     'time': time,
-            # })
+                score_periods += f"({result_period.get('S1', 0)}-{result_period.get('S2', 0)})"
+            result_fun.append(f"{name_liga}{score_periods}\n{nalichie_bolshinstva}\n{time}\n\n")
 
     if result_fun != []:
         pygame.init()
@@ -72,6 +71,7 @@ def match_selection(json_data):
         clock.tick(1)
     else:
         result_fun.append('Нет матчей')
+        
     return result_fun
 
 # print(match_selection(get_ice_hockey_all_json()))        
