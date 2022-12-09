@@ -13,10 +13,7 @@ api_hash = '35e2d83fc7ca77eb48d3200917ae85f0' # Тут укажите получ
 count = 0 # количество выполненых обновлений (индикатор работоспособности.//////)
 time_ozhidaniya = 5     #время через которое делается новый запрос джсона
 list_minute = [16, 17, 18, 19, 36, 37, 38, 39] # какие минуты мониторит
-uslovie_number = int(input('Выберете режим работы\n(0 - большинство + любое время, 1 - Основное, 2 - все игры)')) #выбор режима работы программы 
-# (0. Большинство + любое время)
-# (1. Большинство + нужное время) --- основной режим
-# (2. Все игры)
+uslovie_number = int(input('Choose the mode of operation (0,1,2)')) #выбор режима работы программы 
 
 def get_ice_hockey_all_json():
     params = {
@@ -55,7 +52,7 @@ def match_selection(json_data):
         nalichie_bolshinstva = row_bolshinstva if 'большинстве' in row_bolshinstva else None
         availability_time_in_list_minute = return_time_in_list_minute(time_round)
 
-        uslovie = [(nalichie_bolshinstva != None and ('начала' or 'Матч') not in nalichie_bolshinstva) and get_minute(time_round) > 1, 
+        uslovie = [nalichie_bolshinstva is not None and get_minute(time_round) > 1, 
         nalichie_bolshinstva is not None and availability_time_in_list_minute, 
         get_minute(time_round) > 1]
 
@@ -66,7 +63,7 @@ def match_selection(json_data):
             for i in matchs['SC']['PS']: # Счет в периодах!
                 result_period = list(i.values())[-1]
                 score_periods += f"({result_period.get('S1', 0)}-{result_period.get('S2', 0)})"
-            result_fun += f"{name_liga}\n👉{nalichie_bolshinstva}\n{score_periods}{time}\n\n"
+            result_fun += f"{name_liga}\n{nalichie_bolshinstva}\n⚽️{score_periods}🕑{time}\n\n"
 
     return result_fun
 
@@ -87,31 +84,9 @@ with TelegramClient('my', api_id, api_hash) as client:
                 try:
                     client.edit_message('@hockey_strategy', message=last_message.id, text=result_function)
                 except:
-                    print('Не удалось отредактировать сообщение')
+                    print('Failed edit message Warrning #001')
                     time_ozhidaniya = 3
             else:   
                 client.send_message('@hockey_strategy', message=result_function)
         time.sleep(time_ozhidaniya)
         os.system('clear')
-
-
-
-
-
-#       тестовая функция для получения принтов
-
-# def get_data_print(json_data):
-#     for i in json_data['Value']:
-#         print(i['L']) #название ЛИГИ
-#         print(i['O1']) #название 1 команды
-#         print(i['O2']) #название 2 команды
-#         print(i['SC'].get('I', 'Большинства нет')) #Наличие большинства!
-#         print(list(i['SC']['FS'].values())) #счет команд
-#         time_round = int(i['SC']['TS']) # время игры
-#         print(get_time_all_ice_hockey(time_round))
-#         for i in i['SC']['PS']: # Счет в периодах!
-#             result_period = list(i.values())[-1]
-#             print(f"({result_period.get('S1', 0)}-{result_period.get('S2', 0)})", end=' ')
-#         break
-
-# get_data_print(get_ice_hockey_all_json())
